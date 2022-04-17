@@ -18,3 +18,7 @@ Python packages to convert Pytorch model:
 * onnx
 * onnxruntime
 * onnx-simplifier
+
+## Note
+
+ONNX model exported by Pytorch should be processed by `onnx-simplifier`, otherwise it may cause crash in Halcon.
