@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="21.05.0.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>*</c>
+<c>* Classification of image using ONNX model</c>
+<c>*</c>
+<c></c>
+<l>ImagePath:='ng/42.bmp'</l>
+<l>ModelPath:='my_model_sim.onnx'</l>
+<l>OutputNodeName:='Gemm_10'</l>
+<l>ClassNames:=['ok', 'ng']</l>
+<c></c>
+<c>* read image</c>
+<l>read_image (Image, ImagePath)</l>
+<l>convert_image_type (Image, Image, 'real')</l>
+<c>* read and subtract mean image</c>
+<l>read_image (ImageMean, 'data_mean')</l>
+<l>convert_image_type (ImageMean, ImageMean, 'real')</l>
+<l>sub_image (Image, ImageMean, ImageSub, 1.0/255, 0.0)</l>
+<c>* get desired part of image</c>
+<l>crop_part(ImageSub, ImageClipped, 0, 40, 320, 160)</l>
+<c></c>
+<c>* load onnx model</c>
+<l>read_dl_model(ModelPath,DLModelHandle)</l>
+<c>* set model</c>
+<l>get_system ('cuda_devices',Info)</l>
+<l>tuple_length (Info, NumGPU)</l>
+<l>if (NumGPU==0)</l>
+<l>    set_dl_model_param(DLModelHandle,'runtime','cpu')</l>
+<l>endif</l>
+<l>set_dl_model_param(DLModelHandle,'batch_size',1)</l>
+<l>set_dl_model_param(DLModelHandle,'type', 'generic')</l>
+<l>set_dl_model_param(DLModelHandle,'runtime_init','immediately')</l>
+<c>* get input size from model</c>
+<l>get_dl_model_param(DLModelHandle,'input_dimensions',ProcessImageDim)</l>
+<l>InputKey:='input'</l>
+<l>get_dict_tuple (ProcessImageDim, InputKey, ProcessImageDim)</l>
+<l>ProcessImageWidth:=ProcessImageDim[0]</l>
+<l>ProcessImageHeight:=ProcessImageDim[1]</l>
+<c></c>
+<c>* scale to input size</c>
+<l>zoom_image_size (ImageClipped, ImagePreprocessed, ProcessImageWidth, ProcessImageHeight, 'bilinear')</l>
+<c></c>
+<c>* prepare input</c>
+<l>create_dict (DLSample)</l>
+<l>set_dict_object (ImagePreprocessed, DLSample, InputKey)</l>
+<c>* compute</c>
+<l>apply_dl_model (DLModelHandle,DLSample, [], DLResult)</l>
+<c>* get result (will be multi-channel image if type is 'generic')</c>
+<l>get_dict_object (ResultObject, DLResult, OutputNodeName)</l>
+<l>count_channels (ResultObject,ResultLength)</l>
+<l>tuple_gen_const (ResultLength,0,Confidence)</l>
+<l>for Index := 1 to ResultLength by 1</l>
+<l>    access_channel (ResultObject, Channel, Index)</l>
+<l>    get_grayval (Channel,0,0,ChannelValue)</l>
+<l>    Confidence[Index-1]:=ChannelValue</l>
+<l>endfor</l>
+<c>* get class name</c>
+<l>tuple_sort_index (Confidence, Indices)</l>
+<l>tuple_inverse (Indices, Indices)</l>
+<l>Class:=ClassNames[Indices[0]]</l>
+<c></c>
+<c>* display result</c>
+<l>dev_clear_window ()</l>
+<l>dev_display (Image)</l>
+<l>dev_get_window (WindowHandle1)</l>
+<l>set_tposition (WindowHandle1, 10, 100)</l>
+<c></c>
+<l>tuple_string (Confidence[Indices[0]], '.2f', ConfidenceString)</l>
+<l>write_string (WindowHandle1, Class+' '+ConfidenceString)</l>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>
