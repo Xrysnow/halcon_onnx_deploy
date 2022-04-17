@@ -1,6 +1,6 @@
 # halcon_onnx_deploy
 
-Deploy ONNX model with Halcon.
+Deploy ONNX model with Halcon and C++.
 
 ## Contents
 
